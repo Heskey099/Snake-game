@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+    <title>Snake Game</title>
+</head>
+<body>
+    <canvas id="snakeCanvas" width="400" height="400"></canvas>
+
+    <script>
+        class Snake {
+            constructor() {
+                this.body = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }]; // Initial body with 3 segments
+                this.direction = 'right';
+            }
+
+            move() {
+                // Move the entire snake body based on the direction
+                for (let i = this.body.length - 1; i > 0; i--) {
+                    this.body[i] = { ...this.body[i - 1] };
+                }
+
+                const head = this.body[0];
+                switch (this.direction) {
+                    case 'up':
+                        head.y -= 1;
+                        break;
+                    case 'down':
+                        head.y += 1;
+                        break;
+                    case 'left':
+                        head.x -= 1;
+                        break;
+                    case 'right':
+                        head.x += 1;
+                        break;
+                }
+            }
+
+            changeDirection(newDirection) {
+                // Change the direction, ensuring it's not opposite of the current direction
+                const opposites = { up: 'down', down: 'up', left: 'right', right: 'left' };
+                if (newDirection !== opposites[this.direction]) {
+                    this.direction = newDirection;
+                }
+            }
+
+            eat() {
+                // Logic to handle snake eating food
+                // For simplicity, let's assume the snake always eats the food and grows
+                const tail = { ...this.body[this.body.length - 1] };
+                this.body.push(tail);
+            }
+
+            checkCollision() {
+                // Logic to check for collisions with walls or itself
+                const head = this.body[0];
+                if (
+                    head.x < 0 || head.x >= 20 ||
+                    head.y < 0 || head.y >= 20 ||
+                    this.body.slice(1).some(segment => segment.x === head.x && segment.y === head.y)
+                ) {
+                    return true; // Collision detected
+                }
+                return false;
+            }
+        }
+
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('snakeCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.snake = new Snake();
+                this.food = { x: 15, y: 15 }; // Initial food position
+                this.score = 0;
+                this.highScore = localStorage.getItem('snakeHighScore') || 0;
+            }
+
+            draw() {
+                // Draw the game state on the canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw snake
+                this.ctx.fillStyle = '#00f';
+                this.snake.body.forEach(segment => {
+                    this.ctx.fillRect(segment.x * 20, segment.y * 20, 20, 20);
+                });
+
+                // Draw food
+                this.ctx.fillStyle = '#f00';
+                this.ctx.fillRect(this.food.x * 20, this.food.y * 20, 20, 20);
+
+                // Draw score
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillText(`Score: ${this.score}`, 10, 10);
+                this.ctx.fillText(`High Score: ${this.highScore}`, 10, 25);
+
+                // Game over message
+                if (this.snake.checkCollision()) {
+                    this.ctx.fillText('Game Over!', this.canvas.width / 2 - 40, this.canvas.height / 2);
+                }
+            }
+
+            update() {
+                // Update the game state
+                this.snake.move();
+
+                // Check for collision with food
+                const head = this.snake.body[0];
+                if (head.x === this.food.x && head.y === this.food.y) {
+                    this.snake.eat();
+                    this.score += 10;
+
+                    // Randomly place new food
+                    this.food = {
+                        x: Math.floor(Math.random() * 20),
+                        y: Math.floor(Math.random() * 20)
+                    };
+                }
+
+                // Check for collision with walls or itself
+                if (this.snake.checkCollision()) {
+                    // Handle game over
+                    if (this.score > this.highScore) {
+                        this.highScore = this.score;
+                        localStorage.setItem('snakeHighScore', this.highScore);
+                    }
+                    this.score = 0;
+                    this.snake = new Snake(); // Reset the game
+                }
+            }
+
+            handleInput(event) {
+                // Handle keyboard input to change snake direction
+                switch (event.key) {
+                    case 'ArrowUp':
+                        this.snake.changeDirection('up');
+                        break;
+                    case 'ArrowDown':
+                        this.snake.changeDirection('down');
+                        break;
+                    case 'ArrowLeft':
+                        this.snake.changeDirection('left');
+                        break;
+                    case 'ArrowRight':
+                        this.snake.changeDirection('right');
+                        break;
+                }
+            }
+
+            start() {
+                // Game initialization and main loop
+                setInterval(() => {
+                    this.update();
+                    this.draw();
+                }, 100); // Adjust the speed of the game by changing the interval
+            }
+        }
+
+        const game = new Game();
+        game.start();
+
+        document.addEventListener('keydown', (event) => game.handleInput(event));
+    </script>
+</body>
+</html>
